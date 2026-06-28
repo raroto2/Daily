@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>영업 실적 관리 시스템</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;overflow-x:hidden}
+body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;background:#F3F4F6;min-height:100vh;font-size:14px;color:#1a1a1a}
+
+/* 상단바 */
+.topbar{background:#fff;border-bottom:1px solid #e5e7eb;padding:8px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.topbar-logo{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.topbar-logo i{font-size:20px;color:#185FA5}
+.topbar-title{font-size:14px;font-weight:700;color:#111}
+.topbar-sub{font-size:10px;color:#6b7280}
+.topbar-right{margin-left:auto;display:flex;gap:6px;align-items:center;flex-shrink:0}
+.date-badge{background:#EFF6FF;color:#1d4ed8;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:500;white-space:nowrap}
+.alarm-btn{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:5px 10px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:4px}
+
+/* 내비 */
+.nav{background:#fff;border-bottom:1px solid #e5e7eb;display:flex;overflow-x:auto;position:sticky;top:57px;z-index:199;-webkit-overflow-scrolling:touch}
+.nav::-webkit-scrollbar{height:0}
+.nav-btn{padding:10px 14px;font-size:12px;color:#6b7280;border:none;background:none;cursor:pointer;border-bottom:2.5px solid transparent;white-space:nowrap;font-family:inherit;display:inline-flex;align-items:center;gap:4px;flex-shrink:0}
+.nav-btn.active{color:#185FA5;border-bottom-color:#185FA5;font-weight:600}
+
+/* 컨텐츠 */
+.content{padding:14px;max-width:100%}
+.page{display:none}.page.active{display:block}
+.pg-title{font-size:15px;font-weight:700;color:#111;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.pg-title i{color:#185FA5}
+
+/* 카드 */
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:14px;width:100%;transition:border-color .2s,box-shadow .2s}
+.card.focusable{cursor:pointer}
+.card.focused{border-color:#185FA5!important;box-shadow:0 0 0 3px rgba(24,95,165,.12)!important}
+.card-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap}
+.card-title{font-size:13px;font-weight:600;color:#374151;display:flex;align-items:center;gap:5px}
+.card-title i{font-size:14px;color:#6b7280;flex-shrink:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+@media(max-width:600px){.grid2{grid-template-columns:1fr}}
+
+/* stat */
+.stat-box{background:#F9FAFB;border-radius:8px;padding:10px 12px;border:1px solid #f3f4f6}
+.stat-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:11px;font-weight:700;color:#6b7280}
+.stat-nums{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stat-num{text-align:center}
+.stat-val{font-size:15px;font-weight:700;color:#111}
+.stat-lbl{font-size:10px;color:#9ca3af;margin-top:1px}
+
+/* 배지 */
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.bg-green{background:#DCFCE7;color:#166534}
+.bg-red{background:#FEE2E2;color:#991B1B}
+.bg-yellow{background:#FEF9C3;color:#854D0E}
+.bg-blue{background:#DBEAFE;color:#1e40af}
+.bg-gray{background:#F3F4F6;color:#374151}
+.bg-purple{background:#EDE9FE;color:#5B21B6}
+
+/* 버튼 */
+.btn{padding:7px 12px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid #e5e7eb;background:#fff;color:#374151;font-family:inherit;font-weight:500;display:inline-flex;align-items:center;gap:5px;text-decoration:none;white-space:nowrap;transition:all .15s}
+.btn:hover,.btn:active{background:#f3f4f6}
+.btn.prim{background:#185FA5;color:#fff;border-color:#185FA5}
+.btn.prim:hover{background:#0c447c}
+.btn.dang{background:#dc2626;color:#fff;border-color:#dc2626}
+.btn.grn{background:#16a34a;color:#fff;border-color:#16a34a}
+.btn.amber{background:#d97706;color:#fff;border-color:#d97706}
+.btn.purp{background:#7C3AED;color:#fff;border-color:#7C3AED}
+.btn.sm{padding:5px 10px;font-size:11px;border-radius:6px}
+.btn.xs{padding:3px 8px;font-size:11px;border-radius:5px}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+
+/* 폼 */
+label.lbl{display:block;font-size:12px;color:#374151;margin-bottom:4px;font-weight:600}
+.inp{width:100%;padding:8px 12px;font-size:13px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111;font-family:inherit;transition:border-color .15s}
+.inp:focus{outline:none;border-color:#185FA5;box-shadow:0 0 0 3px rgba(24,95,165,.1)}
+textarea.inp{resize:vertical}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.ffull{margin-bottom:10px}
+.sec{font-size:12px;font-weight:700;color:#374151;margin:14px 0 8px;padding-bottom:5px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:5px}
+
+/* 알림박스 */
+.alrt{padding:10px 12px;border-radius:8px;font-size:12px;margin-bottom:8px;display:flex;align-items:flex-start;gap:8px;border:1px solid}
+.alrt i{flex-shrink:0;margin-top:1px;font-size:14px}
+.alrt.red{background:#FEF2F2;color:#7f1d1d;border-color:#fecaca}.alrt.red i{color:#ef4444}
+.alrt.yel{background:#FFFBEB;color:#78350f;border-color:#fde68a}.alrt.yel i{color:#f59e0b}
+.alrt.grn{background:#F0FDF4;color:#14532d;border-color:#bbf7d0}.alrt.grn i{color:#22c55e}
+.alrt.blu{background:#EFF6FF;color:#1e3a5f;border-color:#bfdbfe}.alrt.blu i{color:#3b82f6}
+.alrt-title{font-weight:600;font-size:12px;margin-bottom:2px}
+.alrt-body{font-size:11px;opacity:.85;line-height:1.4}
+
+/* =============================================
+   테이블 - 모바일 한 줄 고정
+   ============================================= */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px;border:1px solid #e5e7eb}
+.tbl-wrap table{width:max-content;min-width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+th{padding:8px 10px;text-align:left;font-weight:600;color:#6b7280;background:#F9FAFB;border-bottom:1px solid #e5e7eb;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+td{padding:8px 10px;border-bottom:1px solid #f3f4f6;color:#374151;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+tr:last-child td{border-bottom:none}
+tr.good td{background:#F0FDF4}
+tr.bad td{background:#FEF2F2}
+
+/* 실적현황 테이블 컬럼 너비 */
+#perf-tbody tr td:nth-child(1){width:44px}
+#perf-tbody tr td:nth-child(2){width:64px}
+#perf-tbody tr td:nth-child(3){width:52px}
+#perf-tbody tr td:nth-child(4){width:72px}
+#perf-tbody tr td:nth-child(5){width:60px;font-weight:600}
+#perf-tbody tr td:nth-child(6){width:44px;font-weight:700}
+#perf-tbody tr td:nth-child(7){width:76px}
+#perf-tbody tr td:nth-child(8){width:72px}
+#perf-tbody tr td:nth-child(9){width:54px}
+#perf-tbody tr td:nth-child(10){width:54px}
+
+/* 탭 */
+.tab-g{display:flex;gap:6px}
+.tab{padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid #e5e7eb;background:#fff;color:#6b7280;font-weight:500}
+.tab.active{background:#185FA5;color:#fff;border-color:#185FA5}
+
+/* 업로드 */
+.upload-zone{border:2px dashed #d1d5db;border-radius:12px;padding:24px;text-align:center;cursor:pointer;margin-bottom:14px;transition:all .2s}
+.upload-zone:hover,.upload-zone:active{border-color:#185FA5;background:#EFF6FF}
+.upload-zone i{font-size:30px;color:#9ca3af;display:block;margin-bottom:6px}
+.type-sel{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.type-card{border:1.5px solid #e5e7eb;border-radius:10px;padding:12px;cursor:pointer;text-align:center;background:#fff}
+.type-card.active{border-color:#185FA5;background:#EFF6FF}
+.type-card i{font-size:20px;display:block;margin-bottom:4px;color:#9ca3af}
+.type-card.active i{color:#185FA5}
+.type-card-name{font-size:12px;font-weight:600;color:#374151}
+.type-card.active .type-card-name{color:#185FA5}
+.parse-info{background:#F0FDF4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#14532d}
+.parse-warn{background:#FFFBEB;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#78350f}
+
+/* 순위 */
+.rank-row{display:flex;align-items:center;gap:7px;padding:7px 0;border-bottom:1px solid #f3f4f6}
+.rank-row:last-child{border-bottom:none}
+.rn{width:20px;font-size:12px;font-weight:700;text-align:center;flex-shrink:0}
+.rn.g{color:#d97706}.rn.s{color:#6b7280}.rn.b{color:#b45309}.rn.n{color:#9ca3af;font-size:11px}
+.ava{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.a-b{background:#DBEAFE;color:#1e40af}.a-g{background:#DCFCE7;color:#166534}.a-a{background:#FEF9C3;color:#854D0E}
+.a-p{background:#EDE9FE;color:#5B21B6}.a-t{background:#CCFBF1;color:#134E4A}.a-r{background:#FEE2E2;color:#991B1B}
+.ri{flex:1;min-width:0}
+.rname{font-size:12px;font-weight:600;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rsub{font-size:10px;color:#9ca3af}
+.rscore{text-align:right;flex-shrink:0}
+.rcnt{font-size:13px;font-weight:700;color:#111}
+.rfee{font-size:10px;color:#9ca3af}
+
+/* 모달 */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+@media(min-width:600px){.modal-overlay{align-items:center}}
+.modal{background:#fff;border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:92vh;overflow-y:auto}
+@media(min-width:600px){.modal{border-radius:14px;max-width:480px;max-height:90vh}}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.modal-title{font-size:14px;font-weight:700;color:#111;display:flex;align-items:center;gap:7px}
+.modal-drag{width:40px;height:4px;background:#e5e7eb;border-radius:2px;margin:0 auto 14px}
+
+/* 알람팝 */
+.alarm-pop{display:none;position:fixed;top:65px;right:12px;z-index:400;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;width:280px;max-width:calc(100vw - 24px);box-shadow:0 10px 30px rgba(0,0,0,.14)}
+
+/* 토스트 */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;max-width:90vw;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.25);transition:opacity .4s}
+
+/* 인원 카드 */
+.member-card{background:#F9FAFB;border:1px solid #f3f4f6;border-radius:10px;padding:12px;margin-bottom:8px}
+.member-card-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.mc-info{flex:1;min-width:0}
+.mc-name{font-size:13px;font-weight:700;color:#111}
+.mc-sub{font-size:11px;color:#6b7280;margin-top:2px}
+.mc-actions{display:flex;gap:5px;flex-shrink:0}
+.mc-detail{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px}
+.mc-lbl{color:#9ca3af;font-size:10px}
+.mc-val{color:#374151;font-weight:500;word-break:break-all}
+.contact-btns{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
+
+/* 필터 */
+.filter-wrap{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end}
+.filter-item{display:flex;flex-direction:column;gap:3px;flex:1;min-width:90px}
+.filter-item.wide{flex:2;min-width:120px}
+
+/* 알람 설정 */
+.send-type-wrap{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.send-type-item{display:flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;font-size:12px;font-weight:500;background:#fff;flex:1;min-width:110px}
+.send-type-item.sel{border-color:#185FA5;background:#EFF6FF;color:#185FA5}
+
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- 상단바 -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <i class="ti ti-chart-bar"></i>
+    <div><div class="topbar-title">영업 실적 관리</div><div class="topbar-sub">영업부장 전용</div></div>
+  </div>
+  <div class="topbar-right">
+    <span class="date-badge" id="today-badge"></span>
+    <button class="alarm-btn" onclick="toggleAlarmPop()">
+      <i class="ti ti-bell"></i>
+      <span id="alarm-dot" style="background:#ef4444;color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;display:none;align-items:center;justify-content:center;font-weight:700">0</span>
+    </button>
+  </div>
+</div>
+
+<!-- 내비 -->
+<div class="nav">
+  <button class="nav-btn active" onclick="goPage('dashboard',this)"><i class="ti ti-layout-dashboard"></i>대시보드</button>
+  <button class="nav-btn" onclick="goPage('upload',this)"><i class="ti ti-upload"></i>실적업로드</button>
+  <button class="nav-btn" onclick="goPage('performance',this)"><i class="ti ti-chart-line"></i>실적현황</button>
+  <button class="nav-btn" onclick="goPage('members',this)"><i class="ti ti-users"></i>인원관리</button>
+  <button class="nav-btn" onclick="goPage('alarms',this)"><i class="ti ti-bell"></i>알람관리</button>
+</div>
+
+<!-- 알람 팝오버 -->
+<div class="alarm-pop" id="alarm-pop">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <span style="font-size:13px;font-weight:700"><i class="ti ti-bell"></i> 알람</span>
+    <button class="btn xs" onclick="toggleAlarmPop()"><i class="ti ti-x"></i></button>
+  </div>
+  <div id="alarm-pop-list"></div>
+  <button class="btn sm" style="width:100%;justify-content:center;margin-top:8px"
+    onclick="goPage('alarms',document.querySelectorAll('.nav-btn')[4]);toggleAlarmPop()">알람 관리로 이동 →</button>
+</div>
+
+<div class="content">
+
+<!-- ===== 대시보드 ===== -->
+<div id="page-dashboard" class="page active">
+  <div class="pg-title"><i class="ti ti-layout-dashboard"></i>오늘의 실적 현황</div>
+  <div id="center-cards-wrap"></div>
+  <div class="grid2">
+    <div class="card focusable" id="card-top-new" onclick="focusCard('card-top-new')">
+      <div class="card-hd"><div class="card-title"><i class="ti ti-trophy"></i>TOP 10</div><span class="badge bg-green">신규</span></div>
+      <div id="top10-new-list"></div>
+    </div>
+    <div class="card focusable" id="card-top-tot" onclick="focusCard('card-top-tot')">
+      <div class="card-hd"><div class="card-title"><i class="ti ti-trophy"></i>TOP 10</div><span class="badge bg-gray">총량</span></div>
+      <div id="top10-tot-list"></div>
+    </div>
+  </div>
+  <div class="card focusable" id="card-zero" onclick="focusCard('card-zero')">
+    <div class="card-hd">
+      <div class="card-title"><i class="ti ti-alert-circle"></i>실적 없는 상담원 <span style="font-size:10px;color:#9ca3af;font-weight:400">(신규 0건)</span></div>
+      <span class="badge bg-red" id="zero-badge">0명</span>
+    </div>
+    <div id="zero-list"></div>
+    <div class="btn-row">
+      <button class="btn dang sm" onclick="event.stopPropagation();sendAllAlarms()"><i class="ti ti-bell"></i>전체 알람 발송</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 실적 업로드 ===== -->
+<div id="page-upload" class="page">
+  <div class="pg-title"><i class="ti ti-upload"></i>실적 데이터 업로드</div>
+  <div class="card">
+    <div class="sec"><i class="ti ti-toggle-left"></i>업로드 유형</div>
+    <div class="type-sel">
+      <div class="type-card active" id="utype-new" onclick="setUType('new')">
+        <i class="ti ti-file-plus"></i><div class="type-card-name">신규 실적</div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:2px">신규 계약 건수</div>
+      </div>
+      <div class="type-card" id="utype-total" onclick="setUType('total')">
+        <i class="ti ti-files"></i><div class="type-card-name">총량 실적</div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:2px">누적 총량 건수</div>
+      </div>
+    </div>
+    <div class="sec"><i class="ti ti-calendar"></i>날짜 설정</div>
+    <div class="ffull"><label class="lbl">실적 날짜</label><input type="date" class="inp" id="up-date"></div>
+    <div class="sec"><i class="ti ti-table-import"></i>파일 업로드</div>
+    <div class="alrt blu" style="margin-bottom:12px">
+      <i class="ti ti-info-circle"></i>
+      <div class="alrt-body"><strong>파일 포맷</strong>: A열(사번) B열(이름) C열(건수) D열(보험료)<br>1행(헤더)은 자동 제외, 소계/합계 행도 자동 제외됩니다.</div>
+    </div>
+    <div class="upload-zone" onclick="document.getElementById('file-inp').click()">
+      <i class="ti ti-table-import"></i>
+      <div style="font-size:13px;color:#374151;font-weight:500">엑셀 파일 클릭하여 선택</div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:4px">.xlsx / .xls 지원</div>
+      <input type="file" id="file-inp" accept=".xlsx,.xls" style="display:none" onchange="handleFile(this)">
+    </div>
+    <div id="upload-progress" style="display:none;text-align:center;padding:16px;color:#6b7280;font-size:13px">
+      <i class="ti ti-loader-2" style="display:block;font-size:24px;margin-bottom:6px;animation:spin 1s linear infinite"></i>파일 분석 중...
+    </div>
+    <div id="file-preview" style="display:none">
+      <div id="parse-summary"></div>
+      <div class="tbl-wrap">
+        <table style="table-layout:auto">
+          <thead><tr><th>사번</th><th>이름</th><th>건수</th><th>보험료(천)</th><th>매칭</th></tr></thead>
+          <tbody id="preview-tbody"></tbody>
+        </table>
+      </div>
+      <div class="btn-row">
+        <button class="btn prim" onclick="confirmUpload()"><i class="ti ti-check"></i>업로드 확정</button>
+        <button class="btn" onclick="cancelUpload()"><i class="ti ti-x"></i>취소</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div class="card-title"><i class="ti ti-history"></i>업로드 이력</div></div>
+    <div class="tbl-wrap">
+      <table style="table-layout:auto">
+        <thead><tr><th>시각</th><th>유형</th><th>날짜</th><th>매칭</th><th>건수</th><th>보험료(천)</th></tr></thead>
+        <tbody id="upload-history-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 실적 현황 ===== -->
+<div id="page-performance" class="page">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px;flex-wrap:wrap">
+    <div class="pg-title" style="margin:0"><i class="ti ti-chart-line"></i>실적 현황</div>
+    <div class="tab-g">
+      <div class="tab active" onclick="setPerfTab('new',this)">신규</div>
+      <div class="tab" onclick="setPerfTab('tot',this)">총량</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="filter-wrap">
+      <div class="filter-item"><label class="lbl">센터</label>
+        <select class="inp" id="perf-center" onchange="renderPerfTable()"><option value="">전체</option></select>
+      </div>
+      <div class="filter-item"><label class="lbl">실</label>
+        <select class="inp" id="perf-room" onchange="renderPerfTable()"><option value="">전체</option></select>
+      </div>
+      <div class="filter-item"><label class="lbl">상태</label>
+        <select class="inp" id="perf-status" onchange="renderPerfTable()">
+          <option value="">전체</option><option value="good">우수(10↑)</option>
+          <option value="normal">양호(1↑)</option><option value="zero">실적없음</option>
+        </select>
+      </div>
+      <div class="filter-item wide"><label class="lbl">검색</label>
+        <input type="text" class="inp" id="perf-search" placeholder="이름/사번" oninput="renderPerfTable()">
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <colgroup>
+          <col style="width:40px"><col style="width:60px"><col style="width:50px">
+          <col style="width:72px"><col style="width:58px"><col style="width:40px">
+          <col style="width:72px"><col style="width:68px"><col style="width:52px"><col style="width:52px">
+        </colgroup>
+        <thead>
+          <tr><th>순위</th><th>센터</th><th>실</th><th>사번</th><th>이름</th>
+          <th>건수</th><th>보험료(천)</th><th>담당실장</th><th>상태</th><th>관리</th></tr>
+        </thead>
+        <tbody id="perf-tbody"></tbody>
+      </table>
+    </div>
+    <div class="btn-row">
+      <button class="btn dang sm" onclick="sendAllAlarms()"><i class="ti ti-bell"></i>실적없음 전체 알람</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 인원 관리 ===== -->
+<div id="page-members" class="page">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div class="pg-title" style="margin:0"><i class="ti ti-users"></i>인원 관리</div>
+    <div style="display:flex;gap:6px">
+      <button class="btn sm" onclick="openModal('modal-manager','add',null)"><i class="ti ti-user-plus"></i>실장 등록</button>
+      <button class="btn prim sm" onclick="openModal('modal-agent','add',null)"><i class="ti ti-user-plus"></i>상담원 등록</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hd">
+      <div class="card-title"><i class="ti ti-shield-check"></i>실장 목록 <span id="mgr-count" class="badge bg-gray" style="margin-left:4px">0명</span></div>
+    </div>
+    <div class="filter-wrap">
+      <div class="filter-item"><label class="lbl">센터</label>
+        <select class="inp" id="mgr-filter-center" onchange="renderManagerList()"><option value="">전체</option></select>
+      </div>
+      <div class="filter-item wide"><label class="lbl">검색</label>
+        <input type="text" class="inp" id="mgr-search" placeholder="이름/사번" oninput="renderManagerList()">
+      </div>
+    </div>
+    <div id="manager-list"></div>
+  </div>
+  <div class="card">
+    <div class="card-hd">
+      <div class="card-title"><i class="ti ti-users"></i>상담원 목록 <span id="agent-count" class="badge bg-gray" style="margin-left:4px">0명</span></div>
+    </div>
+    <div class="filter-wrap">
+      <div class="filter-item"><label class="lbl">센터</label>
+        <select class="inp" id="agent-filter-center" onchange="renderAgentList()"><option value="">전체</option></select>
+      </div>
+      <div class="filter-item"><label class="lbl">실</label>
+        <select class="inp" id="agent-filter-room" onchange="renderAgentList()"><option value="">전체</option></select>
+      </div>
+      <div class="filter-item"><label class="lbl">실장</label>
+        <select class="inp" id="agent-filter-mgr" onchange="renderAgentList()"><option value="">전체</option></select>
+      </div>
+      <div class="filter-item wide"><label class="lbl">검색</label>
+        <input type="text" class="inp" id="agent-search" placeholder="이름/사번" oninput="renderAgentList()">
+      </div>
+    </div>
+    <div id="agent-list"></div>
+  </div>
+</div>
+
+<!-- ===== 알람 관리 ===== -->
+<div id="page-alarms" class="page">
+  <div class="pg-title"><i class="ti ti-bell"></i>알람 관리</div>
+  <div class="card">
+    <div class="card-hd"><div class="card-title"><i class="ti ti-bell-ringing"></i>현재 알람</div>
+      <span class="badge bg-red" id="alarm-badge">0건</span>
+    </div>
+    <div id="alarm-list"></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div class="card-title"><i class="ti ti-settings"></i>알람 설정</div></div>
+    <div class="ffull">
+      <label class="lbl" style="margin-bottom:8px">발송 방법 (복수 선택 가능)</label>
+      <div class="send-type-wrap">
+        <label class="send-type-item sel" id="stype-sms-wrap">
+          <input type="checkbox" id="stype-sms" checked onchange="toggleSendType('sms')">
+          <i class="ti ti-message" style="font-size:16px;color:#185FA5"></i><span>문자 알림</span>
+        </label>
+        <label class="send-type-item" id="stype-email-wrap">
+          <input type="checkbox" id="stype-email" onchange="toggleSendType('email')">
+          <i class="ti ti-mail" style="font-size:16px;color:#7C3AED"></i><span>이메일 발송</span>
+        </label>
+      </div>
+    </div>
+    <button class="btn prim sm" onclick="saveAlarmSettings()"><i class="ti ti-check"></i>설정 저장</button>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div class="card-title"><i class="ti ti-history"></i>발송 이력</div></div>
+    <div class="tbl-wrap">
+      <table style="table-layout:auto">
+        <thead><tr><th>발송시각</th><th>수신실장</th><th>상담원</th><th>방법</th><th>상태</th></tr></thead>
+        <tbody id="alarm-history-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<!-- 실장 모달 -->
+<div class="modal-overlay" id="modal-manager">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-hd">
+      <div class="modal-title"><i class="ti ti-shield-check" style="color:#185FA5"></i><span id="modal-mgr-title">실장 등록</span></div>
+      <button class="btn xs" onclick="closeModal('modal-manager')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="frow">
+      <div><label class="lbl">사번 <span style="color:red">*</span></label><input type="text" class="inp" id="mgr-empno" placeholder="예: 7010001"></div>
+      <div><label class="lbl">이름 <span style="color:red">*</span></label><input type="text" class="inp" id="mgr-name" placeholder="홍길동"></div>
+    </div>
+    <div class="frow">
+      <div><label class="lbl">센터명 <span style="color:red">*</span></label><input type="text" class="inp" id="mgr-center" placeholder="예: A센터, 강남센터"></div>
+      <div><label class="lbl">실 이름 <span style="color:red">*</span></label><input type="text" class="inp" id="mgr-room" placeholder="예: 1실, 영업1실"></div>
+    </div>
+    <div class="frow">
+      <div><label class="lbl">연락처</label><input type="tel" class="inp" id="mgr-phone" placeholder="010-0000-0000"></div>
+      <div><label class="lbl">이메일</label><input type="email" class="inp" id="mgr-email" placeholder="email@example.com"></div>
+    </div>
+    <input type="hidden" id="mgr-edit-idx">
+    <div class="btn-row" style="margin-top:4px">
+      <button class="btn prim" style="flex:1;justify-content:center" onclick="saveMgr()"><i class="ti ti-check"></i>저장</button>
+      <button class="btn" style="flex:1;justify-content:center" onclick="closeModal('modal-manager')">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 상담원 모달 -->
+<div class="modal-overlay" id="modal-agent">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-hd">
+      <div class="modal-title"><i class="ti ti-user" style="color:#185FA5"></i><span id="modal-agent-title">상담원 등록</span></div>
+      <button class="btn xs" onclick="closeModal('modal-agent')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="frow">
+      <div><label class="lbl">사번 <span style="color:red">*</span></label><input type="text" class="inp" id="ag-empno" placeholder="예: 8099999"></div>
+      <div><label class="lbl">이름 <span style="color:red">*</span></label><input type="text" class="inp" id="ag-name" placeholder="홍길동"></div>
+    </div>
+    <div class="frow">
+      <div><label class="lbl">센터명 <span style="color:red">*</span></label><input type="text" class="inp" id="ag-center" placeholder="예: A센터"></div>
+      <div><label class="lbl">실 이름 <span style="color:red">*</span></label><input type="text" class="inp" id="ag-room" placeholder="예: 1실"></div>
+    </div>
+    <div class="ffull">
+      <label class="lbl">담당 실장 <span style="color:red">*</span></label>
+      <select class="inp" id="ag-manager"><option value="">-- 실장을 먼저 등록하세요 --</option></select>
+    </div>
+    <div class="frow">
+      <div><label class="lbl">연락처</label><input type="tel" class="inp" id="ag-phone" placeholder="010-0000-0000"></div>
+      <div><label class="lbl">이메일</label><input type="email" class="inp" id="ag-email" placeholder="email@example.com"></div>
+    </div>
+    <input type="hidden" id="ag-edit-idx">
+    <div class="btn-row" style="margin-top:4px">
+      <button class="btn prim" style="flex:1;justify-content:center" onclick="saveAgent()"><i class="ti ti-check"></i>저장</button>
+      <button class="btn" style="flex:1;justify-content:center" onclick="closeModal('modal-agent')">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 상담원 상세 모달 -->
+<div class="modal-overlay" id="modal-detail">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-hd">
+      <div class="modal-title"><i class="ti ti-user-circle" style="color:#185FA5"></i>상담원 상세</div>
+      <button class="btn xs" onclick="closeModal('modal-detail')"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="modal-detail-body"></div>
+    <div class="btn-row" style="margin-top:4px">
+      <button class="btn dang sm" id="detail-alarm-btn"><i class="ti ti-bell"></i>실장에게 알람</button>
+      <button class="btn sm" onclick="closeModal('modal-detail')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DB 정의 (최상단)
+// ============================================================
+const STORAGE_KEY = 'SALES_APP_V3';
+
+const DB = {
+  managers: [],
+  agents: [],
+  perf: {},
+  alarms: [],
+  uploadHistory: [],
+  _mgrIdx: 0,
+  _agIdx: 0,
+  alarmSendTypes: ['sms'],
+};
+
+// ============================================================
+// localStorage
+// ============================================================
+function loadDB() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (Array.isArray(saved.managers))       DB.managers       = saved.managers;
+    if (Array.isArray(saved.agents))         DB.agents         = saved.agents;
+    if (saved.perf && typeof saved.perf === 'object') DB.perf  = saved.perf;
+    if (Array.isArray(saved.alarms))         DB.alarms         = saved.alarms;
+    if (Array.isArray(saved.uploadHistory))  DB.uploadHistory  = saved.uploadHistory;
+    if (typeof saved._mgrIdx === 'number')   DB._mgrIdx        = saved._mgrIdx;
+    if (typeof saved._agIdx  === 'number')   DB._agIdx         = saved._agIdx;
+    if (Array.isArray(saved.alarmSendTypes)) DB.alarmSendTypes = saved.alarmSendTypes;
+  } catch(e) { console.warn('DB load error', e); }
+}
+
+function saveDB() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(DB)); }
+  catch(e) { console.warn('DB save error', e); }
+}
+
+// ============================================================
+// 전역 상태
+// ============================================================
+let perfTab = 'new';
+let currentUType = 'new';
+let alarmPopOpen = false;
+let parsedUploadData = [];
+
+// ============================================================
+// 초기화
+// ============================================================
+window.onload = function() {
+  loadDB();
+
+  const now = new Date();
+  document.getElementById('today-badge').textContent =
+    now.toLocaleDateString('ko-KR', {year:'numeric', month:'short', day:'numeric', weekday:'short'});
+  document.getElementById('up-date').value = now.toISOString().slice(0, 10);
+
+  // 알람 설정 UI 복원
+  document.getElementById('stype-sms').checked   = DB.alarmSendTypes.includes('sms');
+  document.getElementById('stype-email').checked  = DB.alarmSendTypes.includes('email');
+  document.getElementById('stype-sms-wrap').classList.toggle('sel',   DB.alarmSendTypes.includes('sms'));
+  document.getElementById('stype-email-wrap').classList.toggle('sel',  DB.alarmSendTypes.includes('email'));
+
+  populateAllSelects();
+  renderDashboard();
+  renderPerfTable();
+  renderManagerList();
+  renderAgentList();
+  renderAlarms();
+  renderUploadHistory();
+  updateAlarmBadge();
+};
+
+// ============================================================
+// 셀렉트 옵션 갱신
+// ============================================================
+function getUniqCenters() {
+  return [...new Set([
+    ...DB.managers.map(m => m.center),
+    ...DB.agents.map(a => a.center)
+  ])].filter(Boolean).sort();
+}
+function getUniqRooms(center) {
+  return [...new Set(
+    DB.agents.filter(a => !center || a.center === center).map(a => a.room)
+  )].filter(Boolean).sort();
+}
+
+function populateAllSelects() {
+  const centers = getUniqCenters();
+
+  ['perf-center','agent-filter-center','mgr-filter-center'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const v = el.value;
+    el.innerHTML = '<option value="">전체</option>' + centers.map(c => `<option value="${c}">${c}</option>`).join('');
+    if (v) el.value = v;
+  });
+
+  const cF = document.getElementById('agent-filter-center');
+  const rooms = getUniqRooms(cF ? cF.value : '');
+  const roomSel = document.getElementById('agent-filter-room');
+  if (roomSel) {
+    const v = roomSel.value;
+    roomSel.innerHTML = '<option value="">전체</option>' + rooms.map(r => `<option value="${r}">${r}</option>`).join('');
+    if (v) roomSel.value = v;
+  }
+
+  const mgrSel = document.getElementById('agent-filter-mgr');
+  if (mgrSel) {
+    const v = mgrSel.value;
+    mgrSel.innerHTML = '<option value="">전체</option>' + DB.managers.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+    if (v) mgrSel.value = v;
+  }
+
+  const agMgr = document.getElementById('ag-manager');
+  if (agMgr) {
+    const v = agMgr.value;
+    agMgr.innerHTML = '<option value="">-- 실장 선택 --</option>' +
+      DB.managers.map(m => `<option value="${m.name}">${m.name} (${m.center} ${m.room})</option>`).join('');
+    if (v) agMgr.value = v;
+  }
+}
+
+// ============================================================
+// 페이지 / 카드 전환
+// ============================================================
+function goPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  window.scrollTo(0, 0);
+}
+function focusCard(id) {
+  document.querySelectorAll('.card.focusable').forEach(c => c.classList.remove('focused'));
+  const c = document.getElementById(id);
+  if (c) c.classList.add('focused');
+}
+
+// ============================================================
+// 실적 없는 상담원 추출 (신규 건수 = 0)
+// ============================================================
+function getZeroAgents() {
+  return DB.agents.filter(a => {
+    const p = DB.perf[a.empno];
+    return !p || p.new_cnt === 0;
+  });
+}
+
+// ============================================================
+// 대시보드
+// ============================================================
+function renderDashboard() {
+  // 센터별 집계
+  const cData = {};
+  DB.agents.forEach(ag => {
+    const p = DB.perf[ag.empno] || {new_cnt:0,new_fee:0,tot_cnt:0,tot_fee:0};
+    if (!cData[ag.center]) cData[ag.center] = {new_cnt:0,new_fee:0,tot_cnt:0,tot_fee:0};
+    cData[ag.center].new_cnt += p.new_cnt;
+    cData[ag.center].new_fee += p.new_fee;
+    cData[ag.center].tot_cnt += p.tot_cnt;
+    cData[ag.center].tot_fee += p.tot_fee;
+  });
+
+  const wrap = document.getElementById('center-cards-wrap');
+  if (!Object.keys(cData).length) {
+    wrap.innerHTML = '<div style="color:#9ca3af;font-size:13px;text-align:center;padding:20px;background:#fff;border-radius:12px;margin-bottom:14px;border:1px solid #e5e7eb">인원을 등록하고 실적을 업로드하면 여기에 표시됩니다.</div>';
+  } else {
+    wrap.innerHTML = Object.entries(cData).map(([center, d]) => `
+      <div class="card focusable" onclick="focusCard(this.id)" id="ccard-${encodeURIComponent(center)}">
+        <div class="card-hd"><div class="card-title"><i class="ti ti-building"></i>${center}</div><span class="badge bg-blue">오늘</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="stat-box">
+            <div class="stat-header"><span>신규</span><span class="badge bg-green" style="font-size:10px">NEW</span></div>
+            <div class="stat-nums">
+              <div class="stat-num"><div class="stat-val">${d.new_cnt}건</div><div class="stat-lbl">계약건수</div></div>
+              <div class="stat-num"><div class="stat-val">${d.new_fee.toLocaleString()}</div><div class="stat-lbl">보험료(천)</div></div>
+            </div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-header"><span>총량</span><span class="badge bg-gray" style="font-size:10px">TOT</span></div>
+            <div class="stat-nums">
+              <div class="stat-num"><div class="stat-val">${d.tot_cnt}건</div><div class="stat-lbl">계약건수</div></div>
+              <div class="stat-num"><div class="stat-val">${d.tot_fee.toLocaleString()}</div><div class="stat-lbl">보험료(천)</div></div>
+            </div>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  // TOP 10
+  const avC = ['a-a','a-b','a-g','a-p','a-t','a-r'];
+  function top10HTML(key) {
+    const sorted = DB.agents
+      .filter(a => DB.perf[a.empno])
+      .map(a => ({...a, ...DB.perf[a.empno]}))
+      .sort((x, y) => y[key] - x[key])
+      .slice(0, 10);
+    if (!sorted.length) return '<div style="color:#9ca3af;font-size:12px;padding:12px 0;text-align:center">실적 데이터 없음</div>';
+    return sorted.map((a, i) => {
+      const rn = i===0?'g':i===1?'s':i===2?'b':'n';
+      const cnt = key==='new_cnt' ? a.new_cnt : a.tot_cnt;
+      const fee = key==='new_cnt' ? a.new_fee : a.tot_fee;
+      return `<div class="rank-row">
+        <span class="rn ${rn}">${i+1}</span>
+        <div class="ava ${avC[i%avC.length]}">${a.name[0]}</div>
+        <div class="ri"><div class="rname">${a.name}</div><div class="rsub">${a.center}·${a.room}</div></div>
+        <div class="rscore"><div class="rcnt">${cnt}건</div><div class="rfee">${fee.toLocaleString()}천</div></div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('top10-new-list').innerHTML = top10HTML('new_cnt');
+  document.getElementById('top10-tot-list').innerHTML = top10HTML('tot_cnt');
+
+  // 실적 없는 상담원 (신규 0건)
+  const zeros = getZeroAgents();
+  document.getElementById('zero-badge').textContent = zeros.length + '명';
+  if (!zeros.length) {
+    document.getElementById('zero-list').innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:10px 0">실적 없는 상담원이 없습니다 🎉</div>';
+  } else {
+    document.getElementById('zero-list').innerHTML = zeros.map((a, i) => `
+      <div class="alrt ${i<2?'red':'yel'}" style="margin-bottom:6px">
+        <i class="ti ti-alert-${i<2?'circle':'triangle'}"></i>
+        <div style="flex:1">
+          <div class="alrt-title">${a.name} (${a.empno})</div>
+          <div class="alrt-body">${a.center} ${a.room} · 담당: ${a.manager} 실장</div>
+        </div>
+        <button class="btn xs" onclick="event.stopPropagation();sendOneAlarm('${esc(a.manager)}','${esc(a.name)}','${a.empno}','${esc(a.center)}','${esc(a.room)}')">알람</button>
+      </div>`).join('');
+  }
+}
+
+function esc(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+// ============================================================
+// 실적 현황
+// ============================================================
+function setPerfTab(type, el) {
+  perfTab = type;
+  document.querySelectorAll('#page-performance .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderPerfTable();
+}
+
+function renderPerfTable() {
+  const center = document.getElementById('perf-center').value;
+  const status = document.getElementById('perf-status').value;
+  const search = (document.getElementById('perf-search').value || '').toLowerCase();
+
+  // 실 옵션 갱신
+  const rooms = getUniqRooms(center);
+  const rs = document.getElementById('perf-room');
+  const rv = rs.value;
+  rs.innerHTML = '<option value="">전체</option>' + rooms.map(r => `<option value="${r}">${r}</option>`).join('');
+  if (rooms.includes(rv)) rs.value = rv;
+  const room = rs.value;
+
+  const ck = perfTab==='new' ? 'new_cnt' : 'tot_cnt';
+  const fk = perfTab==='new' ? 'new_fee' : 'tot_fee';
+
+  let list = DB.agents.map(a => ({
+    ...a,
+    ...(DB.perf[a.empno] || {new_cnt:0,new_fee:0,tot_cnt:0,tot_fee:0})
+  }));
+  if (center) list = list.filter(a => a.center === center);
+  if (room)   list = list.filter(a => a.room === room);
+  if (search) list = list.filter(a => a.name.toLowerCase().includes(search) || a.empno.includes(search));
+  list.sort((x, y) => y[ck] - x[ck]);
+
+  if (status === 'good')   list = list.filter(a => a[ck] >= 10);
+  else if (status === 'normal') list = list.filter(a => a[ck] >= 1 && a[ck] < 10);
+  else if (status === 'zero')   list = list.filter(a => a[ck] === 0);
+
+  const tbody = document.getElementById('perf-tbody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#9ca3af;padding:20px">조회된 데이터 없음</td></tr>';
+    return;
+  }
+
+  let rank = 1;
+  tbody.innerHTML = list.map(a => {
+    const cnt = a[ck], fee = a[fk];
+    const isZero = cnt === 0, isGood = cnt >= 10;
+    const badge = isZero
+      ? '<span class="badge bg-red">없음</span>'
+      : isGood ? '<span class="badge bg-green">우수</span>'
+      : '<span class="badge bg-blue">양호</span>';
+    const rTxt = isZero ? '—' : rank + '위';
+    const rStyle = rank===1 ? 'color:#d97706;font-weight:700'
+      : rank===2 ? 'color:#6b7280;font-weight:700'
+      : rank===3 ? 'color:#b45309;font-weight:700' : '';
+    const act = isZero
+      ? `<button class="btn xs dang" onclick="sendOneAlarm('${esc(a.manager)}','${esc(a.name)}','${a.empno}','${esc(a.center)}','${esc(a.room)}')">알람</button>`
+      : `<button class="btn xs" onclick="showDetail('${a.empno}')">상세</button>`;
+    if (!isZero) rank++;
+    return `<tr class="${isGood&&!isZero?'good':isZero?'bad':''}">
+      <td style="${rStyle}">${rTxt}</td>
+      <td>${a.center}</td><td>${a.room}</td><td>${a.empno}</td>
+      <td>${a.name}</td><td><strong>${cnt}</strong></td>
+      <td>${fee.toLocaleString()}</td><td>${a.manager}</td>
+      <td>${badge}</td><td>${act}</td>
+    </tr>`;
+  }).join('');
+}
+
+function showDetail(empno) {
+  const a = DB.agents.find(x => x.empno === empno);
+  const p = DB.perf[empno] || {new_cnt:0,new_fee:0,tot_cnt:0,tot_fee:0};
+  if (!a) return;
+  const pl = a.phone
+    ? `<a href="tel:${a.phone}" class="btn xs grn"><i class="ti ti-phone"></i>전화</a>
+       <a href="sms:${a.phone}" class="btn xs amber"><i class="ti ti-message"></i>문자</a>` : '';
+  const el = a.email
+    ? `<a href="mailto:${a.email}" class="btn xs purp"><i class="ti ti-mail"></i>이메일</a>` : '';
+  document.getElementById('modal-detail-body').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div class="ava a-b" style="width:44px;height:44px;font-size:15px">${a.name[0]}</div>
+      <div><div style="font-size:15px;font-weight:700">${a.name}</div>
+        <div style="font-size:11px;color:#6b7280">${a.empno} · ${a.center} ${a.room}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div style="background:#F9FAFB;border-radius:8px;padding:10px"><div style="font-size:10px;color:#9ca3af">신규 건수</div><div style="font-size:18px;font-weight:700">${p.new_cnt}건</div></div>
+      <div style="background:#F9FAFB;border-radius:8px;padding:10px"><div style="font-size:10px;color:#9ca3af">신규 보험료</div><div style="font-size:18px;font-weight:700">${p.new_fee.toLocaleString()}천</div></div>
+      <div style="background:#F9FAFB;border-radius:8px;padding:10px"><div style="font-size:10px;color:#9ca3af">총량 건수</div><div style="font-size:18px;font-weight:700">${p.tot_cnt}건</div></div>
+      <div style="background:#F9FAFB;border-radius:8px;padding:10px"><div style="font-size:10px;color:#9ca3af">총량 보험료</div><div style="font-size:18px;font-weight:700">${p.tot_fee.toLocaleString()}천</div></div>
+    </div>
+    <table style="font-size:12px;width:100%;margin-bottom:12px">
+      <tr><td style="color:#9ca3af;padding:4px 0;width:70px">담당실장</td><td style="font-weight:600">${a.manager}</td></tr>
+      <tr><td style="color:#9ca3af;padding:4px 0">연락처</td><td>${a.phone||'-'}</td></tr>
+      <tr><td style="color:#9ca3af;padding:4px 0">이메일</td><td style="word-break:break-all">${a.email||'-'}</td></tr>
+    </table>
+    ${pl||el ? `<div style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:6px">연락하기</div><div class="contact-btns">${pl}${el}</div>` : ''}`;
+  document.getElementById('detail-alarm-btn').onclick = () => {
+    sendOneAlarm(a.manager, a.name, a.empno, a.center, a.room);
+    closeModal('modal-detail');
+  };
+  openModal('modal-detail');
+}
+
+// ============================================================
+// 실적 업로드 (SheetJS)
+// ============================================================
+function setUType(type) {
+  currentUType = type;
+  document.getElementById('utype-new').classList.toggle('active', type==='new');
+  document.getElementById('utype-total').classList.toggle('active', type==='total');
+}
+
+function handleFile(inp) {
+  if (!inp.files || !inp.files[0]) return;
+  const file = inp.files[0];
+  document.getElementById('file-preview').style.display = 'none';
+  document.getElementById('upload-progress').style.display = 'block';
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:''});
+      parseRows(rows, file.name);
+    } catch(err) {
+      document.getElementById('upload-progress').style.display = 'none';
+      alert('파일을 읽을 수 없습니다: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseRows(rows, fname) {
+  const agentMap = {};
+  DB.agents.forEach(a => { agentMap[String(a.empno).trim()] = a; });
+  parsedUploadData = [];
+  let matched = 0, unmatched = 0, skipped = 0;
+
+  rows.forEach((row, rowIdx) => {
+    // A열(0): 사번, B열(1): 이름, C열(2): 건수, D열(3): 보험료
+    const empnoRaw = String(row[0]||'').trim().replace(/[^0-9]/g,'');
+    const nameRaw  = String(row[1]||'').trim();
+    const cntRaw   = String(row[2]||'').replace(/[^0-9]/g,'');
+    const feeRaw   = String(row[3]||'').replace(/[^0-9]/g,'');
+
+    if (!empnoRaw || !nameRaw) return; // 빈 행 제외
+    // 헤더 행 제외 (첫 번째 행 또는 텍스트 헤더)
+    if (/사번|이름|건수|보험료|empno|name/i.test(nameRaw)) { skipped++; return; }
+    // 소계/합계 행 제외
+    if (/소계|합계|계|total/i.test(nameRaw) || /소계|합계/i.test(empnoRaw)) { skipped++; return; }
+    // 사번이 숫자 5자리 이상인 것만
+    if (empnoRaw.length < 5) { skipped++; return; }
+
+    const cnt = parseInt(cntRaw) || 0;
+    const fee = parseInt(feeRaw) || 0;
+    const isMatched = !!agentMap[empnoRaw];
+    if (isMatched) matched++; else unmatched++;
+    parsedUploadData.push({empno:empnoRaw, name:nameRaw, cnt, fee, matched:isMatched, agentInfo: agentMap[empnoRaw]||null});
+  });
+
+  document.getElementById('upload-progress').style.display = 'none';
+  if (!parsedUploadData.length) {
+    alert('파싱된 데이터가 없습니다.\nA열(사번) B열(이름) C열(건수) D열(보험료) 형식인지 확인하세요.');
+    return;
+  }
+
+  document.getElementById('parse-summary').innerHTML =
+    `<div class="parse-info"><strong>파싱 완료:</strong> 전체 ${parsedUploadData.length}행 | 매칭 <strong>${matched}명</strong> | 미등록 ${unmatched}명 | 제외 ${skipped}행</div>` +
+    (unmatched > 0 ? `<div class="parse-warn">미등록 사번 ${unmatched}건은 반영되지 않습니다. 인원관리에서 먼저 등록하세요.</div>` : '');
+
+  document.getElementById('preview-tbody').innerHTML = parsedUploadData.map(r =>
+    `<tr>
+      <td>${r.empno}</td><td style="font-weight:600">${r.name}</td>
+      <td>${r.cnt}</td><td>${r.fee.toLocaleString()}</td>
+      <td>${r.matched ? '<span class="badge bg-green">매칭됨</span>' : '<span class="badge bg-yellow">미등록</span>'}</td>
+    </tr>`).join('');
+
+  document.getElementById('file-preview').style.display = 'block';
+  document.getElementById('file-preview').scrollIntoView({behavior:'smooth'});
+}
+
+function confirmUpload() {
+  if (!parsedUploadData.length) { alert('업로드할 데이터가 없습니다.'); return; }
+  const date = document.getElementById('up-date').value;
+  const dtype = currentUType === 'new' ? '신규' : '총량';
+  let applied = 0;
+
+  parsedUploadData.forEach(r => {
+    if (!r.matched) return;
+    if (!DB.perf[r.empno]) DB.perf[r.empno] = {new_cnt:0,new_fee:0,tot_cnt:0,tot_fee:0};
+    if (currentUType === 'new') { DB.perf[r.empno].new_cnt = r.cnt; DB.perf[r.empno].new_fee = r.fee; }
+    else                        { DB.perf[r.empno].tot_cnt = r.cnt; DB.perf[r.empno].tot_fee = r.fee; }
+    DB.perf[r.empno].date = date;
+    applied++;
+  });
+
+  const now = new Date();
+  const t = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  const unmatched = parsedUploadData.filter(r => !r.matched).length;
+  const totalCnt = parsedUploadData.filter(r => r.matched).reduce((s,r) => s+r.cnt, 0);
+  const totalFee = parsedUploadData.filter(r => r.matched).reduce((s,r) => s+r.fee, 0);
+  DB.uploadHistory.unshift({time:t, dtype, date, matched:applied, unmatched, cnt:totalCnt, fee:totalFee});
+
+  saveDB();
+  cancelUpload();
+  renderDashboard();
+  renderPerfTable();
+  renderUploadHistory();
+  autoCreateZeroAlarms();
+  toast(`✅ 업로드 완료! ${applied}명 반영${unmatched ? ' / '+unmatched+'명 미등록' : ''}`);
+}
+
+function autoCreateZeroAlarms() {
+  const zeros = getZeroAgents();
+  const today = new Date().toISOString().slice(0,10);
+  zeros.forEach(a => {
+    const exists = DB.alarms.some(al => al.agentEmpno === a.empno && al.date === today && !al.read);
+    if (!exists) DB.alarms.push(makeAlarmObj(a.manager, a.name, a.empno, a.center, a.room));
+  });
+  saveDB(); updateAlarmBadge(); renderAlarms();
+}
+
+function cancelUpload() {
+  document.getElementById('file-preview').style.display = 'none';
+  document.getElementById('file-inp').value = '';
+  parsedUploadData = [];
+}
+
+function renderUploadHistory() {
+  const tbody = document.getElementById('upload-history-tbody');
+  tbody.innerHTML = DB.uploadHistory.map(h =>
+    `<tr>
+      <td>${h.time}</td>
+      <td><span class="badge ${h.dtype==='신규'?'bg-blue':'bg-gray'}">${h.dtype}</span></td>
+      <td>${h.date}</td><td>${h.matched||0}명</td>
+      <td>${(h.cnt||0).toLocaleString()}건</td><td>${(h.fee||0).toLocaleString()}</td>
+    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:14px">이력 없음</td></tr>';
+}
+
+// ============================================================
+// 인원 관리
+// ============================================================
+function openModal(id, mode, idx) {
+  if (id === 'modal-manager') {
+    document.getElementById('mgr-edit-idx').value = idx !== null ? idx : '';
+    if (mode === 'edit' && idx !== null) {
+      const m = DB.managers.find(x => x.idx === idx);
+      if (!m) return;
+      document.getElementById('modal-mgr-title').textContent = '실장 수정';
+      document.getElementById('mgr-empno').value  = m.empno;
+      document.getElementById('mgr-name').value   = m.name;
+      document.getElementById('mgr-center').value = m.center;
+      document.getElementById('mgr-room').value   = m.room;
+      document.getElementById('mgr-phone').value  = m.phone  || '';
+      document.getElementById('mgr-email').value  = m.email  || '';
+    } else {
+      document.getElementById('modal-mgr-title').textContent = '실장 등록';
+      ['mgr-empno','mgr-name','mgr-center','mgr-room','mgr-phone','mgr-email'].forEach(i => document.getElementById(i).value = '');
+    }
+  } else if (id === 'modal-agent') {
+    populateAllSelects();
+    document.getElementById('ag-edit-idx').value = idx !== null ? idx : '';
+    if (mode === 'edit' && idx !== null) {
+      const a = DB.agents.find(x => x.idx === idx);
+      if (!a) return;
+      document.getElementById('modal-agent-title').textContent = '상담원 수정';
+      document.getElementById('ag-empno').value   = a.empno;
+      document.getElementById('ag-name').value    = a.name;
+      document.getElementById('ag-center').value  = a.center;
+      document.getElementById('ag-room').value    = a.room;
+      document.getElementById('ag-manager').value = a.manager;
+      document.getElementById('ag-phone').value   = a.phone  || '';
+      document.getElementById('ag-email').value   = a.email  || '';
+    } else {
+      document.getElementById('modal-agent-title').textContent = '상담원 등록';
+      ['ag-empno','ag-name','ag-center','ag-room','ag-phone','ag-email'].forEach(i => document.getElementById(i).value = '');
+      document.getElementById('ag-manager').value = '';
+    }
+  }
+  document.getElementById(id).classList.add('open');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function saveMgr() {
+  const empno  = document.getElementById('mgr-empno').value.trim();
+  const name   = document.getElementById('mgr-name').value.trim();
+  const center = document.getElementById('mgr-center').value.trim();
+  const room   = document.getElementById('mgr-room').value.trim();
+  const phone  = document.getElementById('mgr-phone').value.trim();
+  const email  = document.getElementById('mgr-email').value.trim();
+  if (!empno||!name||!center||!room) { alert('사번, 이름, 센터명, 실 이름은 필수입니다.'); return; }
+  const editIdx = document.getElementById('mgr-edit-idx').value;
+  if (editIdx !== '') {
+    const i = DB.managers.findIndex(m => m.idx === parseInt(editIdx));
+    if (i >= 0) DB.managers[i] = {...DB.managers[i], empno, name, center, room, phone, email};
+    toast('✅ 실장 정보 수정 완료');
+  } else {
+    if (DB.managers.some(m => m.empno === empno)) { alert('이미 등록된 사번입니다.'); return; }
+    DB.managers.push({idx:DB._mgrIdx++, empno, name, center, room, phone, email});
+    toast('✅ 실장 등록 완료');
+  }
+  closeModal('modal-manager');
+  saveDB(); populateAllSelects(); renderManagerList(); renderAgentList(); renderDashboard();
+}
+
+function deleteMgr(idx) {
+  const m = DB.managers.find(x => x.idx === idx);
+  if (!m) return;
+  if (!confirm(`'${m.name}' 실장을 삭제하시겠습니까?`)) return;
+  DB.managers = DB.managers.filter(x => x.idx !== idx);
+  saveDB(); populateAllSelects(); renderManagerList(); renderAgentList(); toast('삭제 완료');
+}
+
+function saveAgent() {
+  const empno   = document.getElementById('ag-empno').value.trim();
+  const name    = document.getElementById('ag-name').value.trim();
+  const center  = document.getElementById('ag-center').value.trim();
+  const room    = document.getElementById('ag-room').value.trim();
+  const manager = document.getElementById('ag-manager').value;
+  const phone   = document.getElementById('ag-phone').value.trim();
+  const email   = document.getElementById('ag-email').value.trim();
+  if (!empno||!name||!center||!room) { alert('사번, 이름, 센터명, 실 이름은 필수입니다.'); return; }
+  if (!manager) { alert('담당 실장을 선택하세요.\n먼저 실장을 등록해야 합니다.'); return; }
+  const editIdx = document.getElementById('ag-edit-idx').value;
+  if (editIdx !== '') {
+    const i = DB.agents.findIndex(a => a.idx === parseInt(editIdx));
+    if (i >= 0) DB.agents[i] = {...DB.agents[i], empno, name, center, room, manager, phone, email};
+    toast('✅ 상담원 정보 수정 완료');
+  } else {
+    if (DB.agents.some(a => a.empno === empno)) { alert('이미 등록된 사번입니다.'); return; }
+    DB.agents.push({idx:DB._agIdx++, empno, name, center, room, manager, phone, email});
+    if (!DB.perf[empno]) DB.perf[empno] = {new_cnt:0, new_fee:0, tot_cnt:0, tot_fee:0};
+    toast('✅ 상담원 등록 완료');
+  }
+  closeModal('modal-agent');
+  saveDB(); populateAllSelects(); renderAgentList(); renderDashboard(); renderPerfTable();
+}
+
+function deleteAgent(idx) {
+  const a = DB.agents.find(x => x.idx === idx);
+  if (!a) return;
+  if (!confirm(`'${a.name}' 상담원을 삭제하시겠습니까?`)) return;
+  DB.agents = DB.agents.filter(x => x.idx !== idx);
+  saveDB(); populateAllSelects(); renderAgentList(); renderDashboard(); renderPerfTable(); toast('삭제 완료');
+}
+
+function renderManagerList() {
+  const center = document.getElementById('mgr-filter-center').value;
+  const search = (document.getElementById('mgr-search').value || '').toLowerCase();
+  const list = DB.managers.filter(m =>
+    (!center || m.center === center) &&
+    (!search || m.name.toLowerCase().includes(search) || m.empno.includes(search))
+  );
+  document.getElementById('mgr-count').textContent = DB.managers.length + '명';
+  const wrap = document.getElementById('manager-list');
+  if (!list.length) {
+    wrap.innerHTML = '<div style="color:#9ca3af;font-size:13px;text-align:center;padding:16px">등록된 실장이 없습니다.<br><button class="btn prim sm" style="margin-top:8px" onclick="openModal(\'modal-manager\',\'add\',null)"><i class="ti ti-user-plus"></i>실장 등록</button></div>';
+    return;
+  }
+  wrap.innerHTML = list.map(m => `
+    <div class="member-card">
+      <div class="member-card-top">
+        <div class="ava a-b" style="width:36px;height:36px;font-size:13px">${m.name[0]}</div>
+        <div class="mc-info">
+          <div class="mc-name">${m.name} <span style="font-size:10px;color:#6b7280;font-weight:400">${m.empno}</span></div>
+          <div class="mc-sub">${m.center} · ${m.room}</div>
+        </div>
+        <div class="mc-actions">
+          <button class="btn xs" onclick="openModal('modal-manager','edit',${m.idx})"><i class="ti ti-edit"></i></button>
+          <button class="btn xs dang" onclick="deleteMgr(${m.idx})"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+      <div class="mc-detail">
+        <div><div class="mc-lbl">연락처</div><div class="mc-val">${m.phone||'-'}</div></div>
+        <div><div class="mc-lbl">이메일</div><div class="mc-val">${m.email||'-'}</div></div>
+      </div>
+      ${m.phone||m.email ? `<div class="contact-btns">
+        ${m.phone ? `<a href="tel:${m.phone}" class="btn xs grn"><i class="ti ti-phone"></i>전화</a><a href="sms:${m.phone}" class="btn xs amber"><i class="ti ti-message"></i>문자</a>` : ''}
+        ${m.email ? `<a href="mailto:${m.email}" class="btn xs purp"><i class="ti ti-mail"></i>이메일</a>` : ''}
+      </div>` : ''}
+    </div>`).join('');
+}
+
+function renderAgentList() {
+  const center = document.getElementById('agent-filter-center').value;
+  const room   = document.getElementById('agent-filter-room').value;
+  const mgr    = document.getElementById('agent-filter-mgr').value;
+  const search = (document.getElementById('agent-search').value || '').toLowerCase();
+
+  const rooms = getUniqRooms(center);
+  const rs = document.getElementById('agent-filter-room');
+  const rv = rs.value;
+  rs.innerHTML = '<option value="">전체</option>' + rooms.map(r => `<option value="${r}">${r}</option>`).join('');
+  if (rooms.includes(rv)) rs.value = rv;
+
+  const list = DB.agents.filter(a =>
+    (!center || a.center === center) &&
+    (!room   || a.room   === room)   &&
+    (!mgr    || a.manager === mgr)   &&
+    (!search || a.name.toLowerCase().includes(search) || a.empno.includes(search))
+  );
+  document.getElementById('agent-count').textContent = DB.agents.length + '명';
+  const wrap = document.getElementById('agent-list');
+  if (!list.length) {
+    wrap.innerHTML = '<div style="color:#9ca3af;font-size:13px;text-align:center;padding:16px">등록된 상담원이 없습니다.</div>';
+    return;
+  }
+  wrap.innerHTML = list.map(a => {
+    const p = DB.perf[a.empno] || {new_cnt:0, new_fee:0};
+    return `
+    <div class="member-card">
+      <div class="member-card-top">
+        <div class="ava a-g" style="width:36px;height:36px;font-size:13px">${a.name[0]}</div>
+        <div class="mc-info">
+          <div class="mc-name">${a.name} <span style="font-size:10px;color:#6b7280;font-weight:400">${a.empno}</span></div>
+          <div class="mc-sub">${a.center} · ${a.room} · ${a.manager} 실장</div>
+        </div>
+        <div class="mc-actions">
+          <button class="btn xs" onclick="openModal('modal-agent','edit',${a.idx})"><i class="ti ti-edit"></i></button>
+          <button class="btn xs dang" onclick="deleteAgent(${a.idx})"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+      <div class="mc-detail">
+        <div><div class="mc-lbl">신규실적</div><div class="mc-val">${p.new_cnt}건 / ${(p.new_fee||0).toLocaleString()}천</div></div>
+        <div><div class="mc-lbl">연락처</div><div class="mc-val">${a.phone||'-'}</div></div>
+        <div><div class="mc-lbl">이메일</div><div class="mc-val" style="font-size:10px">${a.email||'-'}</div></div>
+      </div>
+      ${a.phone||a.email ? `<div class="contact-btns">
+        ${a.phone ? `<a href="tel:${a.phone}" class="btn xs grn"><i class="ti ti-phone"></i>전화</a><a href="sms:${a.phone}" class="btn xs amber"><i class="ti ti-message"></i>문자</a>` : ''}
+        ${a.email ? `<a href="mailto:${a.email}" class="btn xs purp"><i class="ti ti-mail"></i>이메일</a>` : ''}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// 알람
+// ============================================================
+function getAlarmLabel() {
+  const t = DB.alarmSendTypes || ['sms'];
+  if (t.includes('sms') && t.includes('email')) return '문자+이메일';
+  if (t.includes('email')) return '이메일';
+  return '문자';
+}
+
+function makeAlarmObj(manager, agentName, empno, center, room) {
+  const now = new Date();
+  const t = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  return {
+    id: Date.now() + Math.random(),
+    manager, agentName, agentEmpno: empno, center, room,
+    time: t, date: now.toISOString().slice(0,10),
+    read: false, content: '실적 없음', sendType: getAlarmLabel()
+  };
+}
+
+function sendOneAlarm(manager, agentName, empno, center, room) {
+  const mgrObj = DB.managers.find(m => m.name === manager);
+  const types  = DB.alarmSendTypes || ['sms'];
+
+  // 문자 발송
+  if (types.includes('sms') && mgrObj && mgrObj.phone) {
+    const msg = `[실적알람] ${agentName} 상담원(${empno})이 오늘 신규 실적이 0건입니다. 1건이라도 화이팅`;
+    window.open(`sms:${mgrObj.phone}?body=${encodeURIComponent(msg)}`);
+  }
+  // 이메일 발송
+  if (types.includes('email') && mgrObj && mgrObj.email) {
+    const subj = `[실적알람] ${agentName} 상담원 신규 실적 0건`;
+    const body = `${manager} 실장님,\n\n${agentName} 상담원(${empno}, ${center} ${room})이 오늘 신규 실적이 0건입니다. 1건이라도 화이팅\n\n영업 실적 관리 시스템`;
+    window.open(`mailto:${mgrObj.email}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`);
+  }
+
+  DB.alarms.push(makeAlarmObj(manager, agentName, empno, center, room));
+  saveDB(); updateAlarmBadge(); renderAlarms();
+  toast(`📩 ${manager} 실장 알람 발송 (${getAlarmLabel()})`);
+}
+
+function sendAllAlarms() {
+  const zeros = getZeroAgents();
+  if (!zeros.length) { toast('신규 실적 0건인 상담원이 없습니다.'); return; }
+  zeros.forEach(a => sendOneAlarm(a.manager, a.name, a.empno, a.center, a.room));
+}
+
+function toggleSendType(type) {
+  const sms   = document.getElementById('stype-sms').checked;
+  const email = document.getElementById('stype-email').checked;
+  DB.alarmSendTypes = (sms ? ['sms'] : []).concat(email ? ['email'] : []);
+  document.getElementById('stype-sms-wrap').classList.toggle('sel', sms);
+  document.getElementById('stype-email-wrap').classList.toggle('sel', email);
+  saveDB();
+}
+
+function saveAlarmSettings() {
+  const sms   = document.getElementById('stype-sms').checked;
+  const email = document.getElementById('stype-email').checked;
+  if (!sms && !email) { alert('발송 방법을 하나 이상 선택하세요.'); return; }
+  DB.alarmSendTypes = (sms ? ['sms'] : []).concat(email ? ['email'] : []);
+  saveDB();
+  toast('✅ 알람 설정 저장 완료 — ' + getAlarmLabel() + ' 발송');
+}
+
+function renderAlarms() {
+  const unread = DB.alarms.filter(a => !a.read);
+
+  // 팝오버
+  document.getElementById('alarm-pop-list').innerHTML = unread.slice(0,4).map(a => `
+    <div class="alrt red" style="margin-bottom:6px">
+      <i class="ti ti-alert-circle"></i>
+      <div><div class="alrt-title">${a.manager} 실장</div><div class="alrt-body">${a.agentName} — 신규 0건</div></div>
+    </div>`).join('') || '<div style="color:#9ca3af;font-size:12px;padding:8px 0;text-align:center">미확인 알람 없음</div>';
+
+  // 알람 관리 페이지
+  document.getElementById('alarm-list').innerHTML = unread.length === 0
+    ? '<div style="color:#9ca3af;font-size:13px;padding:14px;text-align:center">미확인 알람 없음 ✅</div>'
+    : unread.map(a => `
+      <div class="alrt red" style="margin-bottom:8px">
+        <i class="ti ti-alert-circle"></i>
+        <div style="flex:1">
+          <div class="alrt-title">${a.manager} 실장 → ${a.agentName}</div>
+          <div class="alrt-body">${a.center} ${a.room} · ${a.date} ${a.time} · ${a.sendType||'문자'}</div>
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0;flex-direction:column">
+          <button class="btn xs" onclick="readAlarm('${a.id}')">확인</button>
+          <button class="btn xs prim" onclick="sendOneAlarm('${esc(a.manager)}','${esc(a.agentName)}','${a.agentEmpno}','${esc(a.center)}','${esc(a.room)}')">재발송</button>
+        </div>
+      </div>`).join('');
+
+  // 이력
+  document.getElementById('alarm-history-tbody').innerHTML = [...DB.alarms].reverse().slice(0,30).map(a =>
+    `<tr>
+      <td>${a.date} ${a.time}</td><td>${a.manager}</td><td>${a.agentName}</td>
+      <td>${a.sendType||'문자'}</td>
+      <td><span class="badge ${a.read?'bg-green':'bg-yellow'}">${a.read?'확인':'미확인'}</span></td>
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:14px">이력 없음</td></tr>';
+
+  document.getElementById('alarm-badge').textContent = unread.length + '건';
+}
+
+function readAlarm(id) {
+  const a = DB.alarms.find(x => String(x.id) === String(id));
+  if (a) a.read = true;
+  saveDB(); updateAlarmBadge(); renderAlarms();
+}
+
+function updateAlarmBadge() {
+  const cnt = DB.alarms.filter(a => !a.read).length;
+  const dot = document.getElementById('alarm-dot');
+  dot.textContent = cnt;
+  dot.style.display = cnt > 0 ? 'inline-flex' : 'none';
+}
+
+function toggleAlarmPop() {
+  alarmPopOpen = !alarmPopOpen;
+  document.getElementById('alarm-pop').style.display = alarmPopOpen ? 'block' : 'none';
+}
+document.addEventListener('click', e => {
+  if (alarmPopOpen
+    && !document.getElementById('alarm-pop').contains(e.target)
+    && !e.target.closest('[onclick*="toggleAlarmPop"]')) {
+    alarmPopOpen = false;
+    document.getElementById('alarm-pop').style.display = 'none';
+  }
+});
+
+// ============================================================
+// 토스트
+// ============================================================
+function toast(msg) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 3000);
+}
+</script>
+</body>
+</html>
